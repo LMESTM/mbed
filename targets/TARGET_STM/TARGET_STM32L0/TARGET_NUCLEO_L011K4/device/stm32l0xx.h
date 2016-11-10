@@ -82,8 +82,8 @@
     !defined (STM32L051xx) && !defined (STM32L052xx) && !defined (STM32L053xx) && \
     !defined (STM32L061xx) && !defined (STM32L062xx) && !defined (STM32L063xx) && \
     !defined (STM32L071xx) && !defined (STM32L072xx) && !defined (STM32L073xx) && \
-    !defined (STM32L081xx) && !defined (STM32L082xx) && !defined (STM32L083xx) \
-  #define STM32L011xx
+    !defined (STM32L081xx) && !defined (STM32L082xx) && !defined (STM32L083xx)
+#define STM32L011xx           /*!< */
   /* #define STM32L021xx */
   /* #define STM32L031xx */   /*!< STM32L031C6, STM32L031E6, STM32L031F6, STM32L031G6, STM32L031K6 Devices */
   /* #define STM32L041xx */   /*!< STM32L041C6, STM32L041E6, STM32L041F6, STM32L041G6, STM32L041K6 Devices */
