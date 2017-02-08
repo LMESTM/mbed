@@ -11,7 +11,6 @@
 #include "cmsis.h"
 #include "pinmap.h"
 #include "PeripheralPins.h"
-#include "StmI2sPeripheralPins.h"
 
 // #define DEBUG_STDIO 1
 

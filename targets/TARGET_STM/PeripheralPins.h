@@ -73,6 +73,13 @@ extern const PinMap PinMap_SPI_SCLK[];
 extern const PinMap PinMap_SPI_SSEL[];
 #endif
 
+//*** I2S ***
+extern const PinMap PinMap_I2S_DATA[];
+extern const PinMap PinMap_I2S_FDPX[];
+extern const PinMap PinMap_I2S_SCLK[];
+extern const PinMap PinMap_I2S_WSEL[];
+extern const PinMap PinMap_I2S_MCLK[];
+
 //*** CAN ***
 #ifdef DEVICE_CAN
 extern const PinMap PinMap_CAN_RD[];
