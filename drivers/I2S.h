@@ -10,7 +10,6 @@
 #include "platform/SingletonPtr.h"
 
 #include "platform/CThunk.h"
-#include "hal/stm_dma_api.h"
 #include "platform/CircularBuffer.h"
 #include "platform/FunctionPointer.h"
 #include "platform/Transaction.h"

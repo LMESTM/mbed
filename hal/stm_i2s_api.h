@@ -5,7 +5,7 @@
 
 #include "device.h"
 #include "stm_objects.h"
-#include "hal/stm_dma_api.h"
+#include "dma_api.h"
 #include "hal/buffer.h"
 
 #if DEVICE_I2S

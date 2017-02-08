@@ -1,4 +1,4 @@
-#include "stm_dma_api.h"
+#include "dma_api.h"
 #include "stm_dma_caps.h"
 #include "device.h"
 #include "stm_objects.h"
