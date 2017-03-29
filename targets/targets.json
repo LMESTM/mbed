@@ -1001,7 +1001,8 @@
         "device_has": ["ANALOGIN", "I2C", "I2CSLAVE", "I2C_ASYNCH", "INTERRUPTIN", "LOWPOWERTIMER", "PORTIN", "PORTINOUT", "PORTOUT", "PWMOUT", "RTC", "SERIAL", "SERIAL_FC", "SLEEP", "SPI", "SPISLAVE", "SPI_ASYNCH", "STDIO_MESSAGES", "FLASH"],
         "default_lib": "small",
         "release_versions": ["2"],
-        "device_name": "STM32L011K4"
+        "device_name": "STM32L011K4",
+        "bootloader_supported": true
     },
     "NUCLEO_L031K6": {
         "inherits": ["Target"],
@@ -1014,7 +1015,8 @@
         "device_has": ["ANALOGIN", "I2C", "I2CSLAVE", "I2C_ASYNCH", "INTERRUPTIN", "LOWPOWERTIMER", "PORTIN", "PORTINOUT", "PORTOUT", "PWMOUT", "RTC", "SERIAL", "SERIAL_FC", "SLEEP", "SPI", "SPISLAVE", "SPI_ASYNCH", "STDIO_MESSAGES", "FLASH"],
         "default_lib": "small",
         "release_versions": ["2"],
-        "device_name": "STM32L031K6"
+        "device_name": "STM32L031K6",
+        "bootloader_supported": true
     },
     "NUCLEO_L053R8": {
         "supported_form_factors": ["ARDUINO", "MORPHO"],
@@ -1027,7 +1029,8 @@
         "device_has": ["ANALOGIN", "ANALOGOUT", "I2C", "I2CSLAVE", "I2C_ASYNCH", "INTERRUPTIN", "LOWPOWERTIMER", "PORTIN", "PORTINOUT", "PORTOUT", "PWMOUT", "RTC", "SERIAL", "SERIAL_FC", "SERIAL_ASYNCH", "SLEEP", "SPI", "SPISLAVE", "SPI_ASYNCH", "STDIO_MESSAGES", "FLASH"],
         "default_lib": "small",
         "release_versions": ["2"],
-        "device_name": "STM32L053R8"
+        "device_name": "STM32L053R8",
+        "bootloader_supported": true
     },
     "NUCLEO_L073RZ": {
         "supported_form_factors": ["ARDUINO", "MORPHO"],
@@ -1039,7 +1042,8 @@
         "detect_code": ["0760"],
         "device_has": ["ANALOGIN", "ANALOGOUT", "I2C", "I2CSLAVE", "I2C_ASYNCH", "INTERRUPTIN", "LOWPOWERTIMER", "PORTIN", "PORTINOUT", "PORTOUT", "PWMOUT", "RTC", "SERIAL", "SERIAL_FC", "SERIAL_ASYNCH", "SLEEP", "SPI", "SPISLAVE", "SPI_ASYNCH", "STDIO_MESSAGES", "TRNG", "FLASH"],
         "release_versions": ["2", "5"],
-        "device_name": "STM32L073RZ"
+        "device_name": "STM32L073RZ",
+        "bootloader_supported": true
     },
     "NUCLEO_L152RE": {
         "supported_form_factors": ["ARDUINO", "MORPHO"],
