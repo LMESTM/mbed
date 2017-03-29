@@ -21,11 +21,6 @@
 #include "mbed_assert.h"
 #include "cmsis.h"
 
-/**
-  * @brief  Gets the page of a given address
-  * @param  Addr: Address of the FLASH Memory
-  * @retval The page of a given address
-  */
 static uint32_t GetPage(uint32_t Addr)
 {
   uint32_t page = 0;
@@ -44,11 +39,6 @@ static uint32_t GetPage(uint32_t Addr)
   return page;
 }
 
-/**
-  * @brief  Gets the bank of a given address
-  * @param  Addr: Address of the FLASH Memory
-  * @retval The bank of a given address
-  */
 static uint32_t GetBank(uint32_t Addr)
 {
     uint32_t bank = 0;
@@ -76,11 +66,6 @@ static uint32_t GetBank(uint32_t Addr)
     return bank;
 }
 
-/** Initialize the flash peripheral and the flash_t object
- *
- * @param obj The flash object
- * @return 0 for success, -1 for error
- */
 int32_t flash_init(flash_t *obj)
 {
     /* Unlock the Flash to enable the flash control register access *************/
@@ -88,11 +73,6 @@ int32_t flash_init(flash_t *obj)
     return 0;
 }
 
-/** Uninitialize the flash peripheral and the flash_t object
- *
- * @param obj The flash object
- * @return 0 for success, -1 for error
- */
 int32_t flash_free(flash_t *obj)
 {
     /* Lock the Flash to disable the flash control register access (recommended
@@ -101,13 +81,6 @@ int32_t flash_free(flash_t *obj)
     return 0;
 }
 
-/** Erase one sector starting at defined address
- *
- * The address should be at sector boundary. This function does not do any check for address alignments
- * @param obj The flash object
- * @param address The sector starting address
- * @return 0 for success, -1 for error
- */
 int32_t flash_erase_sector(flash_t *obj, uint32_t address)
 {
     uint32_t FirstPage = 0, BankNumber = 0;
@@ -119,8 +92,6 @@ int32_t flash_erase_sector(flash_t *obj, uint32_t address)
         return -1;
     }
 
-      /* Clear OPTVERR bit set on virgin samples */
-    __HAL_FLASH_CLEAR_FLAG(FLASH_FLAG_OPTVERR);
     /* Get the 1st page to erase */
     FirstPage = GetPage(address);
     /* MBED HAL erases 1 page  / sector at a time */
@@ -144,17 +115,6 @@ int32_t flash_erase_sector(flash_t *obj, uint32_t address)
     }
 }
 
-/** Program one page starting at defined address
- *
- * The page should be at page boundary, should not cross multiple sectors.
- * This function does not do any check for address alignments or if size
- * is aligned to a page size.
- * @param obj The flash object
- * @param address The sector starting address
- * @param data The data buffer to be programmed
- * @param size The number of bytes to program
- * @return 0 for success, -1 for error
- */
 int32_t flash_program_page(flash_t *obj, uint32_t address,
         const uint8_t *data, uint32_t size)
 {
@@ -202,12 +162,6 @@ int32_t flash_program_page(flash_t *obj, uint32_t address,
     return 0;
 }
 
-/** Get sector size
- * 
- * @param obj The flash object
- * @param address The sector starting address
- * @return The size of a sector
- */
 uint32_t flash_get_sector_size(const flash_t *obj, uint32_t address) {
     /*  considering 1 sector = 1 page */
     if ((address >= (FLASH_BASE + FLASH_SIZE)) || (address < FLASH_BASE)) {
@@ -217,31 +171,15 @@ uint32_t flash_get_sector_size(const flash_t *obj, uint32_t address) {
     }
 }
 
-/** Get page size
- *
- * @param obj The flash object
- * @param address The page starting address
- * @return The size of a page
- */
 uint32_t flash_get_page_size(const flash_t *obj) {
     /*  considering 1 sector = 1 page */
     return FLASH_PAGE_SIZE;
 }
 
-/** Get start address for the flash region
- *
- * @param obj The flash object
- * @return The start address for the flash region
- */
 uint32_t flash_get_start_address(const flash_t *obj) {
     return FLASH_BASE;
 }
 
-/** Get the flash region size
- *
- * @param obj The flash object
- * @return The flash region size
- */
 uint32_t flash_get_size(const flash_t *obj) {
     return FLASH_SIZE;
 }
