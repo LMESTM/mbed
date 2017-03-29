@@ -3,7 +3,7 @@
 #endif
 
 #if !defined(MBED_APP_SIZE)
-  #define MBED_APP_SIZE 2048k
+  #define MBED_APP_SIZE 1048k
 #endif
 
 /* Linker script to configure memory regions. */
