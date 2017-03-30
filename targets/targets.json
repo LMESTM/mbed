@@ -1037,6 +1037,7 @@
         "core": "Cortex-M0+",
         "default_toolchain": "ARM",
         "extra_labels": ["STM", "STM32L0", "STM32L073RZ", "STM32L073xx"],
+        "macros": ["MBED_APPLICATION_SUPPORT=1"],
         "supported_toolchains": ["ARM", "uARM", "GCC_ARM", "IAR"],
         "inherits": ["Target"],
         "detect_code": ["0760"],
