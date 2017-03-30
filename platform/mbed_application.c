@@ -48,7 +48,12 @@ static void powerdown_nvic()
     int i;
     int j;
 
+#if (defined(__CORTEX_M0) || defined(__CORTEX_M0PLUS))
+    // Just one register for Cortex-M0 cores
+    isr_count = 1;
+#else
     isr_count = (SCnSCB->ICTR & SCnSCB_ICTR_INTLINESNUM_Msk) >> SCnSCB_ICTR_INTLINESNUM_Pos;
+#endif
     for (i = 0; i < isr_count; i++) {
         NVIC->ICER[i] = 0xFFFFFFFF;
         NVIC->ICPR[i] = 0xFFFFFFFF;
@@ -73,13 +78,23 @@ static void powerdown_scb(uint32_t vtor)
         SCB->SHPR[i] = 0x00;
 #else
         SCB->SHP[i] = 0x00;
+#if (defined(__CORTEX_M0) || defined(__CORTEX_M0PLUS))
+        // SHP has only 2 registers
+        if (i == 1) {
+            break;
+        }
+#endif
 #endif
     }
+
+#if (!defined(__CORTEX_M0) && !defined(__CORTEX_M0PLUS))
+    // these debug registers are available only via DAP, not processor
     SCB->SHCSR = 0x00000000;
     SCB->CFSR = 0xFFFFFFFF;
     SCB->HFSR = SCB_HFSR_DEBUGEVT_Msk | SCB_HFSR_FORCED_Msk | SCB_HFSR_VECTTBL_Msk;
     SCB->DFSR = SCB_DFSR_EXTERNAL_Msk | SCB_DFSR_VCATCH_Msk |
                 SCB_DFSR_DWTTRAP_Msk | SCB_DFSR_BKPT_Msk | SCB_DFSR_HALTED_Msk;
+#endif
     // SCB->MMFAR   - Implementation defined value
     // SCB->BFAR    - Implementation defined value
     // SCB->AFSR    - Implementation defined value
@@ -125,3 +140,4 @@ void start_new_application(void *sp, void *pc)
 #endif
 
 #endif /* MBED_APPLICATION_SUPPORT */
+

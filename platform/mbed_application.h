@@ -21,7 +21,10 @@
 
 #include<stdint.h>
 
+#ifndef MBED_APPLICATION_SUPPORT
 #define MBED_APPLICATION_SUPPORT (defined(__CORTEX_M3) || defined(__CORTEX_M4) || defined(__CORTEX_M7))
+#endif
+
 #if MBED_APPLICATION_SUPPORT
 #ifdef __cplusplus
 extern "C" {
