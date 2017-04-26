@@ -3966,9 +3966,8 @@ static HAL_StatusTypeDef I2C_MasterReceive_RXNE(I2C_HandleTypeDef *hi2c)
       (*hi2c->pBuffPtr++) = hi2c->Instance->DR;
       hi2c->XferCount--;
 
-      tmp = (uint32_t)(hi2c->State) & I2C_STATE_MSK;
-      hi2c->PreviousState = tmp | (uint32_t)(hi2c->Mode);
       hi2c->State = HAL_I2C_STATE_READY;
+      hi2c->PreviousState = I2C_STATE_NONE;
 
       if(hi2c->Mode == HAL_I2C_MODE_MEM)
       {
