@@ -152,6 +152,12 @@ public:
      */
     void set_data_carrier_detect(PinName dcd_pin, bool active_high = false);
 
+    /** Set the baud rate
+     *
+     *  @param baud   The baud rate
+     */
+    void set_baud(int baud);
+
     // Expose private SerialBase::Parity as UARTSerial::Parity
     using SerialBase::Parity;
     // In C++11, we wouldn't need to also have using directives for each value
