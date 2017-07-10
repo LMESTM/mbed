@@ -190,7 +190,7 @@ ssize_t UARTSerial::read(void* buffer, size_t length)
 
     core_util_critical_section_enter();
     if (!_rx_irq_enabled) {
-        UARTSerial::rx_irq();               // only read from hardware in one place
+        //UARTSerial::rx_irq();               // only read from hardware in one place
         if (!_rxbuf.full()) {
             SerialBase::attach(callback(this, &UARTSerial::rx_irq), RxIrq);
             _rx_irq_enabled = true;
@@ -265,12 +265,9 @@ void UARTSerial::rx_irq(void)
 
     /* Fill in the receive buffer if the peripheral is readable
      * and receive buffer is not full. */
-    while (!_rxbuf.full() && SerialBase::readable()) {
-        char data = SerialBase::_base_getc();
-        _rxbuf.push(data);
-    }
-
-    if (_rx_irq_enabled && _rxbuf.full()) {
+    if (!_rxbuf.full()) {
+        _rxbuf.push(SerialBase::_base_getc());
+    } else {
         SerialBase::attach(NULL, RxIrq);
         _rx_irq_enabled = false;
     }
