@@ -152,7 +152,7 @@ ssize_t UARTSerial::write(const void* buffer, size_t length)
 
     core_util_critical_section_enter();
     if (!_tx_irq_enabled) {
-        UARTSerial::tx_irq();                // only write to hardware in one place
+        //UARTSerial::tx_irq();                // only write to hardware in one place
         if (!_txbuf.empty()) {
             SerialBase::attach(callback(this, &UARTSerial::tx_irq), TxIrq);
             _tx_irq_enabled = true;
@@ -285,7 +285,7 @@ void UARTSerial::tx_irq(void)
 
     /* Write to the peripheral if there is something to write
      * and if the peripheral is available to write. */
-    while (!_txbuf.empty() && SerialBase::writeable()) {
+    if (!_txbuf.empty() && SerialBase::writeable()) {
         char data;
         _txbuf.pop(data);
         SerialBase::_base_putc(data);
@@ -296,7 +296,7 @@ void UARTSerial::tx_irq(void)
         _tx_irq_enabled = false;
     }
 
-    /* Report the File handler that data can be written to peripheral. */
+    /* Report the File handler that data can be writRXNE to peripheral. */
     if (was_full && !_txbuf.full() && !hup()) {
         wake();
     }
