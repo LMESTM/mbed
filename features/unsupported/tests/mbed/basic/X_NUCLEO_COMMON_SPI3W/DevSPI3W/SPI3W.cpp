@@ -83,10 +83,8 @@ uint8_t SPI3W::Sensor_IO_SPI_Write( DigitalOut * _cs_pin, uint8_t WriteAddr, uin
 
     write(WriteAddr);
     
-  for(i=0;i<nBytesToWrite;i++)
-  {
-        write(pBuffer[i]);
-  }
+    write((const char *)pBuffer, (int) nBytesToWrite, NULL, 0);
+
 // Deselect the device
   Sensor_IO_SPI_CS_Disable(_cs_pin);
   
@@ -107,31 +105,6 @@ uint8_t SPI3W::Sensor_IO_Write( DigitalOut * _cs_pin, uint8_t WriteAddr, uint8_t
    return Sensor_IO_SPI_Write( _cs_pin, WriteAddr, pBuffer, nBytesToWrite );
 }
 
-
-/**
- * @brief  This function reads a single byte on SPI 3-wire.
- * @param  xSpiHandle : SPI Handler.
- * @param  val : value.
- * @retval None
- */
-void SPI3W::SPI_Read(SPI_HandleTypeDef* xSpiHandle, uint8_t *val)
-{
-  *val = spi_slave_read(&_spi);
-}
-
-/**
- * @brief  This function reads multiple bytes on SPI 3-wire.
- * @param  xSpiHandle: SPI Handler.
- * @param  val: value.
- * @param  nBytesToRead: number of bytes to read.
- * @retval None
- */
-void SPI3W::SPI_Read_nBytes(SPI_HandleTypeDef* xSpiHandle, uint8_t *val, uint16_t nBytesToRead)
-{
-	for (int i=0; i<nBytesToRead; i++) *(val+i) = spi_slave_read(&_spi);  
-}	
-
-
 /**
  * @brief  Reads a from the sensor to buffer
  * @param  handle instance handle
@@ -145,12 +118,10 @@ uint8_t SPI3W::Sensor_IO_SPI_Read( DigitalOut * _cs_pin, uint8_t ReadAddr, uint8
 {   
   /* Select the correct device */
   Sensor_IO_SPI_CS_Enable(_cs_pin);
-   
-  /* Write Reg Address with RD bit*/
-  write(ReadAddr | 0x80);
+  uint8_t TxByte = ReadAddr | 0x80;
 
-  SPI_Read_nBytes(&_spi.spi.handle, pBuffer, nBytesToRead);
-  
+  write((const char *)&TxByte, 1, (char *)pBuffer, (int) nBytesToRead);
+
   /* Deselect the device */
   Sensor_IO_SPI_CS_Disable(_cs_pin);  
   

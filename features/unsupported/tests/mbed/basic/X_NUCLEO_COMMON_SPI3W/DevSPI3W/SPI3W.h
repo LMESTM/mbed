@@ -68,8 +68,6 @@ public:
 private:
      uint8_t Sensor_IO_Read( DigitalOut * _cs_pin, uint8_t ReadAddr, uint8_t *pBuffer, uint16_t nBytesToRead );
      uint8_t Sensor_IO_SPI_Read( DigitalOut * _cs_pin, uint8_t ReadAddr, uint8_t *pBuffer, uint16_t nBytesToRead );
-     void    SPI_Read(SPI_HandleTypeDef* xSpiHandle, uint8_t *val);
-     void    SPI_Read_nBytes(SPI_HandleTypeDef* xSpiHandle, uint8_t *val, uint16_t nBytesToRead);
 
      uint8_t Sensor_IO_Write( DigitalOut * _cs_pin, uint8_t WriteAddr, uint8_t *pBuffer, uint16_t nBytesToWrite );
      uint8_t Sensor_IO_SPI_Write( DigitalOut * _cs_pin, uint8_t WriteAddr, uint8_t *pBuffer, uint16_t nBytesToWrite );
