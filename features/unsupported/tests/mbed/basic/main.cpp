@@ -46,6 +46,12 @@ int main() {
 
   uint8_t id;
   float value1, value2;
+  DigitalOut SensorPower(A0);
+
+  SensorPower = 0;
+    wait(1);
+  SensorPower = 1; 
+    wait(1);
 
   printf ("\n\rRunning SPI3W_Test program\n\r");
   
