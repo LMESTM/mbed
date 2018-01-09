@@ -35,6 +35,12 @@ void mbed_start_application(uintptr_t address)
 
     SysTick->CTRL = 0x00000000;
     powerdown_nvic();
+#if TARGET_STM32F7
+    SCB_InvalidateICache();
+    SCB_DisableICache();
+    SCB_CleanInvalidateDCache();
+    SCB_DisableDCache();
+#endif /* TARGET_STM32F7 */
     powerdown_scb(address);
 
     sp = *((void**)address + 0);
