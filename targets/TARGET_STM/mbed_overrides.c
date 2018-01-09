@@ -36,6 +36,10 @@ void mbed_sdk_init()
 
 #if TARGET_STM32F7
     // Enable CPU L1-Cache
+    SCB_InvalidateICache();
+    SCB_DisableICache();
+    SCB_CleanInvalidateDCache();
+    SCB_DisableDCache();
     SCB_EnableICache();
     SCB_EnableDCache();
 #endif /* TARGET_STM32F7 */
