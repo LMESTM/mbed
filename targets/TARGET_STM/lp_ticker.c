@@ -154,6 +154,16 @@ void lp_ticker_init(void)
 
 static void LPTIM1_IRQHandler(void)
 {
+    __HAL_RCC_GPIOA_CLK_ENABLE();
+    GPIO_InitTypeDef GPIO_InitStruct;
+    GPIO_InitStruct.Pin = GPIO_PIN_0;
+    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+    GPIO_InitStruct.Pull = GPIO_PULLUP;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FAST;
+    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+    HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_4);
+
     LptimHandle.Instance = LPTIM1;
 
     if (lp_Fired) {
@@ -178,6 +188,8 @@ static void LPTIM1_IRQHandler(void)
 #if !(TARGET_STM32L4)
     __HAL_LPTIM_WAKEUPTIMER_EXTI_CLEAR_FLAG();
 #endif
+    HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_4);
+    
 }
 
 uint32_t lp_ticker_read(void)
@@ -191,6 +203,17 @@ void lp_ticker_set_interrupt(timestamp_t timestamp)
     // Disable IRQs
     // core_util_critical_section_enter();
 
+    __HAL_RCC_GPIOB_CLK_ENABLE();
+    GPIO_InitTypeDef GPIO_InitStruct;
+    GPIO_InitStruct.Pin = GPIO_PIN_0;
+    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+    GPIO_InitStruct.Pull = GPIO_PULLUP;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FAST;
+    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+    HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_0);
+
+
     LptimHandle.Instance = LPTIM1;
     irq_handler = (void (*)(void))lp_ticker_irq_handler;
 
@@ -203,6 +226,8 @@ void lp_ticker_set_interrupt(timestamp_t timestamp)
     __HAL_LPTIM_COMPARE_SET(&LptimHandle, timestamp);
 
     NVIC_EnableIRQ(LPTIM1_IRQn);
+
+    HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_0);
 
     // Enable IRQs
     // core_util_critical_section_exit();
