@@ -1568,7 +1568,7 @@
         },
         "detect_code": ["0765"],
         "macros_add": ["USBHOST_OTHER"],
-        "device_has_add": ["ANALOGOUT", "CAN", "SERIAL_ASYNCH", "SERIAL_FC", "TRNG", "FLASH"],
+        "device_has_add": ["ANALOGOUT", "CAN", "SERIAL_ASYNCH", "SERIAL_FC", "TRNG", "FLASH", "LPTICKER"],
         "release_versions": ["2", "5"],
         "device_name": "STM32L476RG",
         "bootloader_supported": true
