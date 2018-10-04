@@ -342,8 +342,26 @@ typedef enum {
     SYS_WKUP5 = PC_5,
 
     // Not connected
-    NC = (int)0xFFFFFFFF
+    NC = (int)0xFFFFFFFF,
+
+#if (defined (TARGET_P_L496G_CELL01) || defined(TARGET_P_L496G_CELL02))
+    MDMPWRON  = PD_3,   // Power (active high)
+    MDMRST    = PC_7,    // Reset (active low)
+    MDMTXD    = PB_6,    // Transmit Data
+    MDMRXD    = PG_10,    // Receive Data
+    MDMCTS    = PG_11,    // Clear to Send
+    MDMRTS    = PG_12,    // Request to Send
+    MDMDCD    = NC,      // DCD line not connected
+    MDMDSR    = NC,      // DSR line not connected
+    MDMDTR    = NC,      // DTR line not connected
+    MDMRI     = NC      // RI line not connected
+#endif
 } PinName;
+
+
+#define ACTIVE_HIGH_POLARITY    1
+#define ACTIVE_LOW_POLARITY     0
+#define MDM_PIN_POLARITY            ACTIVE_LOW_POLARITY
 
 #ifdef __cplusplus
 }
