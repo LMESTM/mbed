@@ -79,6 +79,7 @@ void mbedtls_sha1_init(mbedtls_sha1_context *ctx)
     st_start_hash_mutex();
 
 
+    printf("SHA1_INIT \r\n");
     /* Enable HASH clock */
     __HAL_RCC_HASH_CLK_ENABLE();
 
@@ -89,6 +90,7 @@ void mbedtls_sha1_free(mbedtls_sha1_context *ctx)
     if (ctx == NULL) {
         return;
     }
+    printf("SHA1_FREE \r\n");
     mbedtls_zeroize(ctx, sizeof(mbedtls_sha1_context));
 }
 

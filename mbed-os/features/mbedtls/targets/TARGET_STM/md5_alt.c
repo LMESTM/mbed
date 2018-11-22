@@ -78,6 +78,8 @@ void mbedtls_md5_init(mbedtls_md5_context *ctx)
 {
     mbedtls_zeroize(ctx, sizeof(mbedtls_md5_context));
 
+    printf("MD5_INIT \r\n");
+
     /* Create mutex if not already done */
     st_start_hash_mutex();
     /* Enable HASH clock */
@@ -90,6 +92,7 @@ void mbedtls_md5_free(mbedtls_md5_context *ctx)
     if (ctx == NULL) {
         return;
     }
+    printf("MD5_FREE \r\n");
     mbedtls_zeroize(ctx, sizeof(mbedtls_md5_context));
 }
 

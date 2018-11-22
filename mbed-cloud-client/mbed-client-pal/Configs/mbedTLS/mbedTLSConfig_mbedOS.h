@@ -243,7 +243,7 @@
 
 #undef MBEDTLS_VERSION_FEATURES
 
-#undef MBEDTLS_DEBUG_C
+//#undef MBEDTLS_DEBUG_C
 
 // needed for parsing the certificates
 #undef MBEDTLS_PEM_PARSE_C

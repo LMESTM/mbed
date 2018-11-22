@@ -684,13 +684,13 @@ static esfs_result_e esfs_read_and_decrypt(esfs_file_t *file_handle, void *buffe
 
     // Get file pointer position for AES - Must be done before calling pal_fsFread() which modifies the file pointer position
     result = esfs_calc_file_pos_for_aes(file_handle, &position);
-
     if(result != ESFS_SUCCESS)
     {
         tr_err("esfs_read_and_decrypt() - esfs_calc_file_pos_for_aes() failed with status = 0x%x", result);
         return result;
     }
 
+    tr_info("esfs_read - esfs_read_and_decrypt - esfs_calc_file_pos_for_aes ok");
 
     // Read file's encrypted data into buffer
     result = esfs_cmac_read(file_handle, buffer, bytes_to_read, read_bytes_ptr );
@@ -700,6 +700,7 @@ static esfs_result_e esfs_read_and_decrypt(esfs_file_t *file_handle, void *buffe
         tr_err("esfs_read_and_decrypt() - esfs_cmac_read() failed with ESFS_status = 0x%x", (unsigned int)result);
         return ESFS_ERROR;
     }
+    tr_info("esfs_read - esfs_read_and_decrypt - esfs_cmac_read ok");
 
 
     // AES decrypt in-place - decrypt the encrypted data inside buffer, into buffer [out parameter]
@@ -710,6 +711,7 @@ static esfs_result_e esfs_read_and_decrypt(esfs_file_t *file_handle, void *buffe
         tr_err("esfs_read_and_decrypt() - esfs_aes_enc_dec_by_file_pos() failed with status = 0x%x", (unsigned int)result);
         return result;
     }
+    tr_info("esfs_read - esfs_read_and_decrypt - esfs_aes_enc_dec_by_file_pos ok");
 
 
     return ESFS_SUCCESS;
@@ -1538,7 +1540,7 @@ esfs_result_e esfs_create(const uint8_t *name, size_t name_length, const esfs_tl
             goto errorExit;
         }
     }
-
+    tr_info("esfs_create - metada done");
     // If esfs is in encryption mode, make the required initializations
     if((esfs_mode & ESFS_ENCRYPTED) != 0)
     {
@@ -1552,6 +1554,7 @@ esfs_result_e esfs_create(const uint8_t *name, size_t name_length, const esfs_tl
             goto errorExit;
         }
 
+        tr_info("esfs_create - pal_initAes done");
         is_aes_ctx_created = true;
 
         // ** Get AES key from PAL
@@ -1566,6 +1569,7 @@ esfs_result_e esfs_create(const uint8_t *name, size_t name_length, const esfs_tl
             goto errorExit;
         }
 
+        tr_info("esfs_create - pal_osGetDeviceKey done");
         // ** Assign generated AES key to AES context
         res = pal_setAesKey( file_handle->aes_ctx,
                              aes_key,
@@ -1579,6 +1583,7 @@ esfs_result_e esfs_create(const uint8_t *name, size_t name_length, const esfs_tl
             result = ESFS_ERROR ;
             goto errorExit;
         }
+        tr_info("esfs_create - pal_setAesKey done");
 
         // ** Generate the AES nonce for AES usage
         res = pal_osRandomBuffer(file_handle->nonce, ESFS_AES_NONCE_SIZE_BYTES);
@@ -1589,6 +1594,7 @@ esfs_result_e esfs_create(const uint8_t *name, size_t name_length, const esfs_tl
             result = ESFS_ERROR ;
             goto errorExit;
         }
+        tr_info("esfs_create - pal_osRandomBuffer done");
     }
 
     // We set the blob_name_length field here because it is in use later in this function when we calculate the file header size.
@@ -1612,6 +1618,7 @@ esfs_result_e esfs_create(const uint8_t *name, size_t name_length, const esfs_tl
         goto errorExit;
     }
 
+        tr_info("esfs_create - esfs_get_name_from_blob done");
     // Put working file name in file_full_path
     char file_full_path[MAX_FULL_PATH_SIZE];
     res = pal_fsGetMountPoint(PAL_FS_PARTITION_PRIMARY, PAL_MAX_FOLDER_DEPTH_CHAR + 1, file_full_path);
@@ -1625,11 +1632,13 @@ esfs_result_e esfs_create(const uint8_t *name, size_t name_length, const esfs_tl
     strncat(file_full_path, file_handle->short_file_name, ESFS_QUALIFIED_FILE_NAME_LENGTH - 1);
 
 
+        tr_info("esfs_create - pal_fsGetMountPoint done");
     // Check if the file exists in the working directory (not acceptable)
     // Note that this is just a check. We will only actually open the file later (in esfs_create_internal()).
     res = pal_fsFopen(file_full_path, PAL_FS_FLAG_READONLY, &file_handle->file);
     if (res == PAL_SUCCESS)
     {
+        tr_info("esfs_create - pal_fsFopen done");
         result = ESFS_EXISTS;
         file_handle->esfs_mode = 0;
         // result can be ESFS_HASH_CONFLICT or ESFS_WRONG_FILE_VERSION
@@ -1637,6 +1646,8 @@ esfs_result_e esfs_create(const uint8_t *name, size_t name_length, const esfs_tl
         // Check that the name written inside the file is the same as that given. If not
         // you should choose a different name.
         esfs_result_e check_result = esfs_check_file_validity(name, name_length, file_handle);
+        
+        tr_info("esfs_create - esfs_check_file_validity done");
         if (check_result == ESFS_HASH_CONFLICT || check_result == ESFS_INVALID_FILE_VERSION)
         {
             result = check_result;
@@ -1651,6 +1662,8 @@ esfs_result_e esfs_create(const uint8_t *name, size_t name_length, const esfs_tl
     {
         // Put backup folder name in file_full_path
         res = pal_fsGetMountPoint(PAL_FS_PARTITION_SECONDARY, PAL_MAX_FOLDER_DEPTH_CHAR + 1, file_full_path);
+        
+        tr_info("esfs_create - pal_fsGetMountPoint done");
         if (res != PAL_SUCCESS)
         {
             tr_err("esfs_create() - pal_fsGetMountPoint() for backup directory failed with pal_status = 0x%x", (unsigned int)res);
@@ -1661,6 +1674,8 @@ esfs_result_e esfs_create(const uint8_t *name, size_t name_length, const esfs_tl
 
         // Create the esfs subfolder for backup
         res = pal_fsMkDir(file_full_path);
+        
+        tr_info("esfs_create - pal_fsMkDir done");
         if (res != PAL_SUCCESS)
         {
             // Any error apart from file exist returns error.
@@ -1677,6 +1692,8 @@ esfs_result_e esfs_create(const uint8_t *name, size_t name_length, const esfs_tl
 
         // Check if the file exists in esfs backup directory (acceptable unless there is a hash conflict for the name)
         res = pal_fsFopen(file_full_path, PAL_FS_FLAG_READONLY, &file_handle->file);
+        
+        tr_info("esfs_create - pal_fsMkDir done");
         if (res == PAL_SUCCESS)
         {
             file_handle->esfs_mode = 0;
@@ -1688,7 +1705,7 @@ esfs_result_e esfs_create(const uint8_t *name, size_t name_length, const esfs_tl
 
             // Close the file.
             pal_fsFclose(&file_handle->file);
-
+        tr_info("esfs_create - pal_fsFclose done");
             if (check_result == ESFS_HASH_CONFLICT || check_result == ESFS_INVALID_FILE_VERSION)
             {
                 tr_err("esfs_create() - esfs_check_file_validity() failed with status 0x%x", check_result);
@@ -1711,6 +1728,7 @@ esfs_result_e esfs_create(const uint8_t *name, size_t name_length, const esfs_tl
                                     // Working or backup
                                     file_full_path
                                 );
+        tr_info("esfs_create - esfs_create_internal done");
     if(result != ESFS_SUCCESS)
     {
         goto errorExit;
@@ -1720,6 +1738,7 @@ esfs_result_e esfs_create(const uint8_t *name, size_t name_length, const esfs_tl
 
 errorExit:
 
+    tr_info("esfs_create - errorExit !!!!!!!");
     // Invalidate blob_name_length filed since it is used to check the file handle validity  [ esfs_validate() ]
     if(file_handle != NULL)
     {
@@ -1833,6 +1852,7 @@ esfs_result_e esfs_open(const uint8_t *name, size_t name_length, uint16_t *esfs_
         // ** Get AES key from PAL
         // Note: On each call, PAL should return the same 128 bits key
         uint8_t aes_key[ESFS_AES_KEY_SIZE_BYTES];
+        tr_info("esfs_open() - pal_initAes ok");
         res = pal_osGetDeviceKey(palOsStorageEncryptionKey128Bit, aes_key, ESFS_AES_KEY_SIZE_BYTES);
 
         if(res != PAL_SUCCESS)
@@ -1841,6 +1861,7 @@ esfs_result_e esfs_open(const uint8_t *name, size_t name_length, uint16_t *esfs_
             result = ESFS_ERROR ;
             goto errorExit;
         }
+        tr_info("esfs_open() - pal_osGetDeviceKey ok");
 
         // ** Assign generated AES key to AES context
         res = pal_setAesKey( file_handle->aes_ctx,
@@ -1855,6 +1876,7 @@ esfs_result_e esfs_open(const uint8_t *name, size_t name_length, uint16_t *esfs_
             result = ESFS_ERROR;
             goto errorExit;
         }
+        tr_info("esfs_open() - pal_setAesKey ok");
 
     }
 
@@ -1871,6 +1893,8 @@ esfs_result_e esfs_open(const uint8_t *name, size_t name_length, uint16_t *esfs_
             result = ESFS_ERROR;
             goto errorExit;
         }
+        
+        tr_info("esfs_open() - esfs_cmac_read AES nonce ok");
     }
 
     file_handle->tlv_properties.number_of_items = 0;
@@ -1886,6 +1910,7 @@ esfs_result_e esfs_open(const uint8_t *name, size_t name_length, uint16_t *esfs_
         goto errorExit;
     }
 
+        tr_info("esfs_open() - esfs_cmac_read nb items ok");
     // Read the metadata properties if there are any
     if(meta_data_qty != 0)
     {
@@ -1918,6 +1943,7 @@ esfs_result_e esfs_open(const uint8_t *name, size_t name_length, uint16_t *esfs_
     // We are at the start of the data section
     file_handle->current_read_pos = 0;
 
+        tr_info("esfs_open() - esfs_cmac_read ok");
     // Get current position
     int32_t current_pos;
     res = pal_fsFtell(&file_handle->file, &current_pos);
@@ -1952,7 +1978,7 @@ esfs_result_e esfs_open(const uint8_t *name, size_t name_length, uint16_t *esfs_
         goto errorExit;
     }
     cmac_created = 0;
-
+        tr_info("esfs_open() - esfs_cmac_finish ok");
     // save the CMAC in the file descriptor. We will use this to check that the file has not
     // changed when esfs_read() or read_meta_data() is called.
     memcpy(&file_handle->cmac[0],&cmac[0],sizeof(file_handle->cmac));
@@ -2053,11 +2079,11 @@ esfs_result_e esfs_read(esfs_file_t *file_handle, void *buffer, size_t bytes_to_
 
     tr_info("esfs_read - enter");
     if(esfs_validate(file_handle) != ESFS_SUCCESS || read_bytes == NULL || !buffer)
-    {
+    {   tr_info("esfs_read - validate error");
         result = ESFS_INVALID_PARAMETER;
         goto errorExit;
     }
-
+    tr_info("esfs_read - validate ok");
     if(file_handle->file_flag != ESFS_READ)
     {
         result = ESFS_FILE_OPEN_FOR_WRITE;
@@ -2071,6 +2097,7 @@ esfs_result_e esfs_read(esfs_file_t *file_handle, void *buffer, size_t bytes_to_
         tr_err("esfs_read() - pal_fsFtell() failed with pal status 0x%x", (unsigned int)res);
         goto errorExit;
     }
+    tr_info("esfs_read - pal_fsFtell ok");
 
     // Limit how many bytes we can actually read depending on the size of the data section.
     remaining_bytes = file_handle->data_size - file_handle->current_read_pos;
@@ -2078,14 +2105,17 @@ esfs_result_e esfs_read(esfs_file_t *file_handle, void *buffer, size_t bytes_to_
 
     if(esfs_cmac_start(file_handle) != ESFS_SUCCESS)
     {
+        tr_info("esfs_read - esfs_cmac_start error");
         goto errorExit;
     }
     cmac_created = 1;
+    tr_info("esfs_read - esfs_cmac_start ok");
 
     if(esfs_cmac_skip_to(file_handle, position) != ESFS_SUCCESS)
     {
         goto errorExit;
     }
+    tr_info("esfs_read - esfs_cmac_skip_to ok");
 
     // Read data
     // If required according to esfs_mode, the read data will be decrypted
@@ -2096,6 +2126,8 @@ esfs_result_e esfs_read(esfs_file_t *file_handle, void *buffer, size_t bytes_to_
         {
             goto errorExit;
         }
+        tr_info("esfs_read - esfs_read_and_decrypt ok");
+
     }
     else
     {
@@ -2103,6 +2135,7 @@ esfs_result_e esfs_read(esfs_file_t *file_handle, void *buffer, size_t bytes_to_
         {
             goto errorExit;
         }
+        tr_info("esfs_read - esfs_cmac_read ok");
     }
 
     *read_bytes = num_bytes;
@@ -2111,6 +2144,7 @@ esfs_result_e esfs_read(esfs_file_t *file_handle, void *buffer, size_t bytes_to_
     {
         goto errorExit;
     }
+    tr_info("esfs_read - esfs_cmac_skip_to ok");
 
     unsigned char cmac[ESFS_CMAC_SIZE_IN_BYTES];
     if(esfs_cmac_finish(file_handle, &cmac[0]) != ESFS_SUCCESS)
@@ -2119,6 +2153,7 @@ esfs_result_e esfs_read(esfs_file_t *file_handle, void *buffer, size_t bytes_to_
         goto errorExit;
     }
     cmac_created = 0;
+    tr_info("esfs_read - esfs_cmac_finish ok");
 
     // Check the cmac and set to the byte after the end of the data being read.
     if(esfs_cmac_check_and_restore(file_handle, &cmac[0], position + num_bytes) != ESFS_SUCCESS)
@@ -2127,6 +2162,7 @@ esfs_result_e esfs_read(esfs_file_t *file_handle, void *buffer, size_t bytes_to_
         result = ESFS_CMAC_DOES_NOT_MATCH;
         goto errorExit;
     }
+    tr_info("esfs_read - esfs_cmac_check_and_restore ok");
 
     // Update the current position
     file_handle->current_read_pos += num_bytes;

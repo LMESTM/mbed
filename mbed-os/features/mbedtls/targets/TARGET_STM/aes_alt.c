@@ -31,6 +31,8 @@
 #define CRYP                         AES
 #endif
 
+uint32_t aesinst_buffer[10] = {0};
+uint16_t aesinst_count=0;
 static int aes_set_key(mbedtls_aes_context *ctx, const unsigned char *key, unsigned int keybits)
 {
     switch (keybits) {
@@ -91,7 +93,20 @@ static void mbedtls_zeroize(void *v, size_t n)
 
 void mbedtls_aes_init(mbedtls_aes_context *ctx)
 {
-    memset(ctx, 0, sizeof(mbedtls_aes_context));
+    uint16_t i;
+    for (i=0; i<10; i++) {
+        if (aesinst_buffer[i] == (uint32_t)ctx) {
+            printf("AES_INIT_%d (init again) addr=0x%08X, size is %d\r\n", i, (uint32_t)ctx, sizeof(mbedtls_aes_context));
+	    break;
+	    }
+    }
+    if (i == 10 ) {
+        aesinst_buffer[aesinst_count] = (uint32_t) ctx;
+        printf("AES_INIT_%d  addr=0x%08X, size %d\r\n", aesinst_count, (uint32_t)ctx, sizeof(mbedtls_aes_context));
+        aesinst_count++;
+    }
+
+   memset(ctx, 0, sizeof(mbedtls_aes_context));
 
 }
 
@@ -101,6 +116,15 @@ void mbedtls_aes_free(mbedtls_aes_context *ctx)
     if (ctx == NULL) {
         return;
     }
+    uint16_t i;
+    for (i=0; i<10; i++) {
+        if (aesinst_buffer[i] == (uint32_t)ctx) {
+            aesinst_buffer[i] = 0;
+            break;
+        }
+    }
+    printf("AES_FREE_%d \r\n", i);
+    aesinst_count -=1;
     /* Force the CRYP Periheral Clock Reset */
     __HAL_RCC_CRYP_FORCE_RESET();
 
@@ -114,6 +138,13 @@ void mbedtls_aes_free(mbedtls_aes_context *ctx)
 int mbedtls_aes_setkey_enc(mbedtls_aes_context *ctx, const unsigned char *key,
                            unsigned int keybits)
 {
+    uint16_t i;
+    for (i=0; i<10; i++) {
+        if (aesinst_buffer[i] == (uint32_t)ctx) {
+            break;
+        }
+    }
+    printf("AES_SETKEY_ENC_%d \r\n", i);
     int ret_val = 0;
     ret_val = aes_set_key(ctx, key, keybits);
     return (ret_val);
@@ -122,6 +153,13 @@ int mbedtls_aes_setkey_enc(mbedtls_aes_context *ctx, const unsigned char *key,
 int mbedtls_aes_setkey_dec(mbedtls_aes_context *ctx, const unsigned char *key,
                            unsigned int keybits)
 {
+    uint16_t i;
+    for (i=0; i<10; i++) {
+        if (aesinst_buffer[i] == (uint32_t)ctx) {
+            break;
+        }
+    }
+    printf("AES_SETKEY_DEC_%d \r\n", i);
     int ret_val = 0;
     ret_val = aes_set_key(ctx, key, keybits);
     return (ret_val);
@@ -135,6 +173,13 @@ int mbedtls_aes_crypt_ecb(mbedtls_aes_context *ctx,
 {
 
     /* allow multi-instance of CRYP use: restore context for CRYP hw module */
+    uint16_t i;
+    for (i=0; i<10; i++) {
+        if (aesinst_buffer[i] == (uint32_t)ctx) {
+            break;
+        }
+    }
+    printf("AESECB_%d mode=%d\r\n", i, mode);
     ctx->hcryp_aes.Instance->CR = ctx->ctx_save_cr;
     ctx->hcryp_aes.Phase = HAL_CRYP_PHASE_READY;
     ctx->hcryp_aes.Init.DataType = CRYP_DATATYPE_8B;
@@ -219,6 +264,13 @@ int mbedtls_aes_crypt_cbc(mbedtls_aes_context *ctx,
 {
     uint32_t tickstart;
     uint32_t *iv_ptr = (uint32_t *)&iv[0];
+    uint16_t i;
+    for (i=0; i<10; i++) {
+        if (aesinst_buffer[i] == (uint32_t)ctx) {
+            break;
+        }
+    }
+    printf("AEScbc_%d mode=%d\r\n", i, mode);
     if (length % 16) {
         return (MBEDTLS_ERR_AES_INVALID_INPUT_LENGTH);
     }
@@ -298,6 +350,13 @@ int mbedtls_aes_crypt_cfb128(mbedtls_aes_context *ctx,
     int c;
     size_t n = *iv_off;
 
+    uint16_t i;
+    for (i=0; i<10; i++) {
+        if (aesinst_buffer[i] == (uint32_t)ctx) {
+            break;
+        }
+    }
+    printf("AEScfb128_%d mode=%d\r\n", i, mode);
     if (mode == MBEDTLS_AES_DECRYPT) {
         while (length--) {
             if (n == 0)
@@ -340,6 +399,13 @@ int mbedtls_aes_crypt_cfb8(mbedtls_aes_context *ctx,
     unsigned char c;
     unsigned char ov[17];
 
+    uint16_t j;
+    for (j=0; j<10; j++) {
+        if (aesinst_buffer[j] == (uint32_t)ctx) {
+            break;
+        }
+    }
+    printf("AEScfb8_%d mode=%d\r\n", j, mode);
     while (length--) {
         memcpy(ov, iv, 16);
         if (mbedtls_aes_crypt_ecb(ctx, MBEDTLS_AES_ENCRYPT, iv, iv) != 0) {
@@ -376,6 +442,13 @@ int mbedtls_aes_crypt_ctr(mbedtls_aes_context *ctx,
     int c, i;
     size_t n = *nc_off;
 
+    uint16_t j;
+    for (j=0; j<10; j++) {
+        if (aesinst_buffer[j] == (uint32_t)ctx) {
+            break;
+        }
+    }
+    printf("AESCTR_%d addr=0x%08X\r\n", j, (uint32_t) ctx);
     while (length--) {
         if (n == 0) {
             if (mbedtls_aes_crypt_ecb(ctx, MBEDTLS_AES_ENCRYPT, nonce_counter, stream_block) != 0) {
@@ -403,7 +476,16 @@ int mbedtls_internal_aes_encrypt(mbedtls_aes_context *ctx,
                                  const unsigned char input[16],
                                  unsigned char output[16])
 {
+    uint16_t i;
+    for (i=0; i<10; i++) {
+        if (aesinst_buffer[i] == (uint32_t)ctx) {
+            break;
+        }
+    }
+    printf("AES_INT_ENC_%d \r\n", i);
     if (HAL_CRYP_AESECB_Encrypt(&ctx->hcryp_aes, (uint8_t *)input, 16, (uint8_t *)output, 10) != HAL_OK) {
+        printf("AESECB_INT_ENCRYPT ERROR\r\n");
+
         // error found
         return ST_ERR_AES_BUSY;
     }
@@ -415,7 +497,15 @@ int mbedtls_internal_aes_decrypt(mbedtls_aes_context *ctx,
                                  const unsigned char input[16],
                                  unsigned char output[16])
 {
+    uint16_t i;
+    for (i=0; i<10; i++) {
+        if (aesinst_buffer[i] == (uint32_t)ctx) {
+            break;
+        }
+    }
+    printf("AES_INT_DEC_%d \r\n", i);
     if (HAL_CRYP_AESECB_Decrypt(&ctx->hcryp_aes, (uint8_t *)input, 16, (uint8_t *)output, 10) != HAL_OK) {
+        printf("AESECB_INT_DECRYPT ERROR\r\n");
         // error found
         return ST_ERR_AES_BUSY;
     }
@@ -427,6 +517,13 @@ void mbedtls_aes_encrypt(mbedtls_aes_context *ctx,
                          const unsigned char input[16],
                          unsigned char output[16])
 {
+    uint16_t i;
+    for (i=0; i<10; i++) {
+        if (aesinst_buffer[i] == (uint32_t)ctx) {
+            break;
+        }
+    }
+    printf("AES_ENC_%d \r\n", i);
     mbedtls_internal_aes_encrypt(ctx, input, output);
 }
 
@@ -434,6 +531,13 @@ void mbedtls_aes_decrypt(mbedtls_aes_context *ctx,
                          const unsigned char input[16],
                          unsigned char output[16])
 {
+    uint16_t i;
+    for (i=0; i<10; i++) {
+        if (aesinst_buffer[i] == (uint32_t)ctx) {
+            break;
+        }
+    }
+    printf("AES_INT_DEC_%d \r\n", i);
     mbedtls_internal_aes_decrypt(ctx, input, output);
 }
 #endif /* MBEDTLS_DEPRECATED_REMOVED */

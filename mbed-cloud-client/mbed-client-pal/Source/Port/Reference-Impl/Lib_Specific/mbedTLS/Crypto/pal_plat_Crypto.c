@@ -106,7 +106,7 @@ palStatus_t pal_plat_initAes(palAesHandle_t *aes)
 {
     palStatus_t status = PAL_SUCCESS;
     palAes_t* localCtx = NULL;
-
+    printf("PAL_INIT_AES siez =  %d\r\n", sizeof(palAes_t) );
     localCtx = (palAes_t*)malloc(sizeof(palAes_t));
     if (NULL == localCtx)
     {
@@ -574,6 +574,7 @@ palStatus_t pal_plat_mdInit(palMDHandle_t* md, palMDType_t mdType)
     const mbedtls_md_info_t* mdInfo = NULL;
     mbedtls_md_type_t mdAlg = MBEDTLS_MD_NONE;
 
+    printf("pal_plat_mdInit : sha256 size = %d", sizeof(palMD_t));
     localCtx = (palMD_t*)malloc(sizeof(palMD_t));
     if (NULL == localCtx)
     {
