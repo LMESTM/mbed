@@ -250,6 +250,8 @@ int mbedtls_sha256_finish_ret(mbedtls_sha256_context *ctx, unsigned char output[
     /* Last accumulation for extra bytes in sbuf_len */
     /* This allows the HW flags to be in place in case mbedtls_sha256_update has not been called yet */
     if (ctx->sbuf_len > 0) {
+        /* clear the rest of the sbuf to make sure it does not contain remaining values from previous calls */
+        mbedtls_zeroize( (ctx->sbuf + ctx->sbuf_len), (ST_SHA256_BLOCK_SIZE - ctx->sbuf_len));
         if (ctx->is224 == 0) {
             if (HAL_HASHEx_SHA256_Accumulate(&ctx->hhash_sha256, ctx->sbuf, ctx->sbuf_len) != 0) {
                 st_release_hash_mutex();
