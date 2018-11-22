@@ -22,6 +22,8 @@
 #if defined(MBEDTLS_SHA256_ALT)
 #include "mbedtls/platform.h"
 
+#include "hash_mutex.h"
+
 /* Implementation that should never be optimized out by the compiler */
 static void mbedtls_zeroize(void *v, size_t n)
 {
@@ -73,8 +75,11 @@ static int st_sha256_save_hw_context(mbedtls_sha256_context *ctx)
 
 void mbedtls_sha256_init(mbedtls_sha256_context *ctx)
 {
-    mbedtls_zeroize(ctx, sizeof(mbedtls_sha256_context));
+    mbedtls_zeroize( ctx, sizeof( mbedtls_sha256_context ) );
 
+    /* Create mutex if not already done */
+    st_start_hash_mutex();
+    }
     /* Enable HASH clock */
     __HAL_RCC_HASH_CLK_ENABLE();
 }
@@ -95,8 +100,13 @@ void mbedtls_sha256_clone(mbedtls_sha256_context *dst,
 
 int mbedtls_sha256_starts_ret(mbedtls_sha256_context *ctx, int is224)
 {
+    if (st_acquire_hash_mutex() != osOK) {
+        return MBEDTLS_ERR_SHA256_HW_ACCEL_FAILED;
+    }
+
     /* HASH IP initialization */
     if (HAL_HASH_DeInit(&ctx->hhash_sha256) == HAL_ERROR) {
+        st_release_hash_mutex();
         return MBEDTLS_ERR_SHA256_HW_ACCEL_FAILED;
     }
 
@@ -106,36 +116,48 @@ int mbedtls_sha256_starts_ret(mbedtls_sha256_context *ctx, int is224)
     /* clear CR ALGO value */
     HASH->CR &= ~HASH_CR_ALGO_Msk;
     if (HAL_HASH_Init(&ctx->hhash_sha256) == HAL_ERROR) {
+        st_release_hash_mutex();
         // error found to be returned
         return MBEDTLS_ERR_SHA256_HW_ACCEL_FAILED;
     }
     if (st_sha256_save_hw_context(ctx) != 1) {
+        st_release_hash_mutex();
         // return HASH_BUSY timeout Error here
         return MBEDTLS_ERR_SHA256_HW_ACCEL_FAILED;
     }
+    st_release_hash_mutex();
     return 0;
 }
 
 int mbedtls_internal_sha256_process(mbedtls_sha256_context *ctx, const unsigned char data[ST_SHA256_BLOCK_SIZE])
 {
+    if (st_acquire_hash_mutex() != osOK) {
+        return MBEDTLS_ERR_SHA256_HW_ACCEL_FAILED;
+    }
+
     if (st_sha256_restore_hw_context(ctx) != 1) {
+        st_release_hash_mutex();
         // Return HASH_BUSY timeout error here
         return MBEDTLS_ERR_SHA256_HW_ACCEL_FAILED;
     }
     if (ctx->is224 == 0) {
         if (HAL_HASHEx_SHA256_Accumulate(&ctx->hhash_sha256, (uint8_t *) data, ST_SHA256_BLOCK_SIZE) != 0) {
-            return MBEDTLS_ERR_SHA256_HW_ACCEL_FAILED;
+            st_release_hash_mutex();
+           return MBEDTLS_ERR_SHA256_HW_ACCEL_FAILED;
         }
     } else {
         if (HAL_HASHEx_SHA224_Accumulate(&ctx->hhash_sha256, (uint8_t *) data, ST_SHA256_BLOCK_SIZE) != 0) {
+            st_release_hash_mutex();
             return MBEDTLS_ERR_SHA256_HW_ACCEL_FAILED;
         }
     }
 
     if (st_sha256_save_hw_context(ctx) != 1) {
         // Return HASH_BUSY timeout error here
+        st_release_hash_mutex();
         return MBEDTLS_ERR_SHA256_HW_ACCEL_FAILED;
     }
+    st_release_hash_mutex();
     return 0;
 }
 
@@ -143,9 +165,13 @@ int mbedtls_sha256_update_ret(mbedtls_sha256_context *ctx, const unsigned char *
 {
     int err;
     size_t currentlen = ilen;
+    if (st_acquire_hash_mutex() != osOK) {
+        return MBEDTLS_ERR_SHA256_HW_ACCEL_FAILED;
+    }
     if (st_sha256_restore_hw_context(ctx) != 1) {
         // Return HASH_BUSY timeout error here
-        return MBEDTLS_ERR_SHA256_HW_ACCEL_FAILED;
+        st_release_hash_mutex();
+       return MBEDTLS_ERR_SHA256_HW_ACCEL_FAILED;
     }
 
     // store mechanism to accumulate ST_SHA256_BLOCK_SIZE bytes (512 bits) in the HW
@@ -168,19 +194,25 @@ int mbedtls_sha256_update_ret(mbedtls_sha256_context *ctx, const unsigned char *
         // fill buffer and process it
         memcpy(ctx->sbuf + ctx->sbuf_len, input, (ST_SHA256_BLOCK_SIZE - ctx->sbuf_len));
         currentlen -= (ST_SHA256_BLOCK_SIZE - ctx->sbuf_len);
+        st_release_hash_mutex();
         err = mbedtls_internal_sha256_process(ctx, ctx->sbuf);
         if (err != 0) {
             return err;
+        }
+        if (st_acquire_hash_mutex() != osOK) {
+            return MBEDTLS_ERR_SHA256_HW_ACCEL_FAILED;
         }
         // Process every input as long as it is %64 bytes, ie 512 bits
         size_t iter = currentlen / ST_SHA256_BLOCK_SIZE;
         if (iter != 0) {
             if (ctx->is224 == 0) {
                 if (HAL_HASHEx_SHA256_Accumulate(&ctx->hhash_sha256, (uint8_t *)(input + ST_SHA256_BLOCK_SIZE - ctx->sbuf_len), (iter * ST_SHA256_BLOCK_SIZE)) != 0) {
+                    st_release_hash_mutex();
                     return MBEDTLS_ERR_SHA256_HW_ACCEL_FAILED;
                 }
             } else {
                 if (HAL_HASHEx_SHA224_Accumulate(&ctx->hhash_sha256, (uint8_t *)(input + ST_SHA256_BLOCK_SIZE - ctx->sbuf_len), (iter * ST_SHA256_BLOCK_SIZE)) != 0) {
+                    st_release_hash_mutex();
                     return MBEDTLS_ERR_SHA256_HW_ACCEL_FAILED;
                 }
             }
@@ -193,46 +225,72 @@ int mbedtls_sha256_update_ret(mbedtls_sha256_context *ctx, const unsigned char *
     }
     if (st_sha256_save_hw_context(ctx) != 1) {
         // Return HASH_BUSY timeout error here
+        st_release_hash_mutex();
         return MBEDTLS_ERR_SHA256_HW_ACCEL_FAILED;
     }
+    st_release_hash_mutex();
     return 0;
 }
 
 int mbedtls_sha256_finish_ret(mbedtls_sha256_context *ctx, unsigned char output[32])
 {
+    if (st_acquire_hash_mutex() != osOK) {
+        return MBEDTLS_ERR_SHA256_HW_ACCEL_FAILED;
+    }
     if (st_sha256_restore_hw_context(ctx) != 1) {
         // Return HASH_BUSY timeout error here
+        st_release_hash_mutex();
         return MBEDTLS_ERR_SHA256_HW_ACCEL_FAILED;
     }
     /* Last accumulation for extra bytes in sbuf_len */
     /* This allows the HW flags to be in place in case mbedtls_sha256_update has not been called yet */
-    if (ctx->is224 == 0) {
-        if (HAL_HASHEx_SHA256_Accumulate(&ctx->hhash_sha256, ctx->sbuf, ctx->sbuf_len) != 0) {
-            return MBEDTLS_ERR_SHA256_HW_ACCEL_FAILED;
-        }
-    } else {
-        if (HAL_HASHEx_SHA224_Accumulate(&ctx->hhash_sha256, ctx->sbuf, ctx->sbuf_len) != 0) {
-            return MBEDTLS_ERR_SHA256_HW_ACCEL_FAILED;
+    if (ctx->sbuf_len > 0) {
+        if (ctx->is224 == 0) {
+            if (HAL_HASHEx_SHA256_Accumulate(&ctx->hhash_sha256, ctx->sbuf, ctx->sbuf_len) != 0) {
+                st_release_hash_mutex();
+                return MBEDTLS_ERR_SHA256_HW_ACCEL_FAILED;
+            }
+        } else {
+            if (HAL_HASHEx_SHA224_Accumulate(&ctx->hhash_sha256, ctx->sbuf, ctx->sbuf_len) != 0) {
+                st_release_hash_mutex();
+                return MBEDTLS_ERR_SHA256_HW_ACCEL_FAILED;
+            }
         }
     }
-
+    
+    /* The following test can happen when the input is empty, and mbedtls_sha256_update has never been called */
+    if(ctx->hhash_sha256.Phase == HAL_HASH_PHASE_READY) {
+        if (ctx->is224 == 0) {
+            /* Select the SHA256 mode and reset the HASH processor core, so that the HASH will be ready to compute
+           the message digest of a new message */
+            HASH->CR |= HASH_ALGOSELECTION_SHA256 | HASH_CR_INIT;
+        } else {
+            /* Select the SHA224 mode and reset the HASH processor core, so that the HASH will be ready to compute
+           the message digest of a new message */
+            HASH->CR |= HASH_ALGOSELECTION_SHA224 | HASH_CR_INIT;
+        }
+    }
     mbedtls_zeroize(ctx->sbuf, ST_SHA256_BLOCK_SIZE);
     ctx->sbuf_len = 0;
     __HAL_HASH_START_DIGEST();
 
     if (ctx->is224 == 0) {
         if (HAL_HASHEx_SHA256_Finish(&ctx->hhash_sha256, output, 10) != 0) {
+            st_release_hash_mutex();
             return MBEDTLS_ERR_SHA256_HW_ACCEL_FAILED;
         }
     } else {
         if (HAL_HASHEx_SHA224_Finish(&ctx->hhash_sha256, output, 10) != 0) {
+            st_release_hash_mutex();
             return MBEDTLS_ERR_SHA256_HW_ACCEL_FAILED;
         }
     }
     if (st_sha256_save_hw_context(ctx) != 1) {
         // Return HASH_BUSY timeout error here
+        st_release_hash_mutex();
         return MBEDTLS_ERR_SHA256_HW_ACCEL_FAILED;
     }
+    st_release_hash_mutex();
     return 0;
 }
 

@@ -23,6 +23,8 @@
 #if defined(MBEDTLS_MD5_ALT)
 #include "mbedtls/platform.h"
 
+#include "hash_mutex.h"
+
 /* Implementation that should never be optimized out by the compiler */
 static void mbedtls_zeroize(void *v, size_t n)
 {
@@ -76,6 +78,8 @@ void mbedtls_md5_init(mbedtls_md5_context *ctx)
 {
     mbedtls_zeroize(ctx, sizeof(mbedtls_md5_context));
 
+    /* Create mutex if not already done */
+    st_start_hash_mutex();
     /* Enable HASH clock */
     __HAL_RCC_HASH_CLK_ENABLE();
 
@@ -97,8 +101,13 @@ void mbedtls_md5_clone(mbedtls_md5_context *dst,
 
 int mbedtls_md5_starts_ret(mbedtls_md5_context *ctx)
 {
+    if (st_acquire_hash_mutex() != osOK) {
+        return MBEDTLS_ERR_SHA256_HW_ACCEL_FAILED;
+    }
+
     /* HASH IP initialization */
     if (HAL_HASH_DeInit(&ctx->hhash_md5) != 0) {
+        st_release_hash_mutex();
         return MBEDTLS_ERR_MD5_HW_ACCEL_FAILED;
     }
 
@@ -107,29 +116,38 @@ int mbedtls_md5_starts_ret(mbedtls_md5_context *ctx)
     /* clear CR ALGO value */
     HASH->CR &= ~HASH_CR_ALGO_Msk;
     if (HAL_HASH_Init(&ctx->hhash_md5) != 0) {
+        st_release_hash_mutex();
         return MBEDTLS_ERR_MD5_HW_ACCEL_FAILED;
     }
     if (st_md5_save_hw_context(ctx) != 1) {
+        st_release_hash_mutex();
         // Return HASH_BUSY timeout error here
         return MBEDTLS_ERR_MD5_HW_ACCEL_FAILED;
     }
-
+    st_release_hash_mutex();
     return 0;
 }
 
 int mbedtls_internal_md5_process(mbedtls_md5_context *ctx, const unsigned char data[ST_MD5_BLOCK_SIZE])
 {
+    if (st_acquire_hash_mutex() != osOK) {
+        return MBEDTLS_ERR_SHA1_HW_ACCEL_FAILED;
+    }
     if (st_md5_restore_hw_context(ctx) != 1) {
         // Return HASH_BUSY timeout error here
+        st_release_hash_mutex();
         return MBEDTLS_ERR_MD5_HW_ACCEL_FAILED;
     }
     if (HAL_HASH_MD5_Accumulate(&ctx->hhash_md5, (uint8_t *)data, ST_MD5_BLOCK_SIZE) != 0) {
+            st_release_hash_mutex();
         return MBEDTLS_ERR_MD5_HW_ACCEL_FAILED;
     }
     if (st_md5_save_hw_context(ctx) != 1) {
         // Return HASH_BUSY timeout error here
+        st_release_hash_mutex();
         return MBEDTLS_ERR_MD5_HW_ACCEL_FAILED;
     }
+    st_release_hash_mutex();
     return 0;
 }
 
@@ -139,8 +157,12 @@ int mbedtls_md5_update_ret(mbedtls_md5_context *ctx, const unsigned char *input,
     size_t currentlen = ilen;
     /* If ilen = 0 : do nothing */
     if (currentlen != 0) {
+        if (st_acquire_hash_mutex() != osOK) {
+            return MBEDTLS_ERR_SHA1_HW_ACCEL_FAILED;
+        }
         if (st_md5_restore_hw_context(ctx) != 1) {
             // Return HASH_BUSY timeout error here
+            st_release_hash_mutex();
             return MBEDTLS_ERR_MD5_HW_ACCEL_FAILED;
         }
 
@@ -153,14 +175,19 @@ int mbedtls_md5_update_ret(mbedtls_md5_context *ctx, const unsigned char *input,
             // fill buffer and process it
             memcpy(ctx->sbuf + ctx->sbuf_len, input, (ST_MD5_BLOCK_SIZE - ctx->sbuf_len));
             currentlen -= (ST_MD5_BLOCK_SIZE - ctx->sbuf_len);
+            st_release_hash_mutex();
             err = mbedtls_internal_md5_process(ctx, ctx->sbuf);
             if (err != 0) {
                 return err;
+            }
+            if (st_acquire_hash_mutex() != osOK) {
+                return MBEDTLS_ERR_SHA1_HW_ACCEL_FAILED;
             }
             // Process every input as long as it is %64 bytes, ie 512 bits
             size_t iter = currentlen / ST_MD5_BLOCK_SIZE;
             if (iter != 0) {
                 if (HAL_HASH_MD5_Accumulate(&ctx->hhash_md5, (uint8_t *)(input + ST_MD5_BLOCK_SIZE - ctx->sbuf_len), (iter * ST_MD5_BLOCK_SIZE)) != 0) {
+            st_release_hash_mutex();
                     return MBEDTLS_ERR_MD5_HW_ACCEL_FAILED;
                 }
             }
@@ -173,21 +200,28 @@ int mbedtls_md5_update_ret(mbedtls_md5_context *ctx, const unsigned char *input,
 
         if (st_md5_save_hw_context(ctx) != 1) {
             // Return HASH_BUSY timeout error here
+        st_release_hash_mutex();
             return MBEDTLS_ERR_MD5_HW_ACCEL_FAILED;
         }
     }
+    st_release_hash_mutex();
     return 0;
 }
 
 int mbedtls_md5_finish_ret(mbedtls_md5_context *ctx, unsigned char output[16])
 {
+    if (st_acquire_hash_mutex() != osOK) {
+        return MBEDTLS_ERR_SHA1_HW_ACCEL_FAILED;
+    }
     if (st_md5_restore_hw_context(ctx) != 1) {
         // Return HASH_BUSY timeout error here
+        st_release_hash_mutex();
         return MBEDTLS_ERR_MD5_HW_ACCEL_FAILED;
     }
     /* Last accumulation for extra bytes in sbuf_len */
     /* This sets HW flags in case mbedtls_md5_update has not been called yet */
     if (HAL_HASH_MD5_Accumulate(&ctx->hhash_md5, ctx->sbuf, ctx->sbuf_len) != 0) {
+        st_release_hash_mutex();
         return MBEDTLS_ERR_MD5_HW_ACCEL_FAILED;
     }
 
@@ -196,12 +230,15 @@ int mbedtls_md5_finish_ret(mbedtls_md5_context *ctx, unsigned char output[16])
     __HAL_HASH_START_DIGEST();
 
     if (HAL_HASH_MD5_Finish(&ctx->hhash_md5, output, 10)) {
+        st_release_hash_mutex();
         return MBEDTLS_ERR_MD5_HW_ACCEL_FAILED;
     }
     if (st_md5_save_hw_context(ctx) != 1) {
         // Return HASH_BUSY timeout error here
+        st_release_hash_mutex();
         return MBEDTLS_ERR_MD5_HW_ACCEL_FAILED;
     }
+    st_release_hash_mutex();
     return 0;
 }
 

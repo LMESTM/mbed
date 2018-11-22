@@ -21,6 +21,8 @@
 #if defined(MBEDTLS_SHA1_ALT)
 #include "mbedtls/platform.h"
 
+#include "hash_mutex.h"
+
 /* Implementation that should never be optimized out by the compiler */
 static void mbedtls_zeroize(void *v, size_t n)
 {
@@ -73,6 +75,9 @@ static int st_sha1_save_hw_context(mbedtls_sha1_context *ctx)
 void mbedtls_sha1_init(mbedtls_sha1_context *ctx)
 {
     mbedtls_zeroize(ctx, sizeof(mbedtls_sha1_context));
+    /* Create mutex if not already done */
+    st_start_hash_mutex();
+
 
     /* Enable HASH clock */
     __HAL_RCC_HASH_CLK_ENABLE();
@@ -95,8 +100,12 @@ void mbedtls_sha1_clone(mbedtls_sha1_context *dst,
 
 int mbedtls_sha1_starts_ret(mbedtls_sha1_context *ctx)
 {
+    if (st_acquire_hash_mutex() != osOK) {
+        return MBEDTLS_ERR_SHA1_HW_ACCEL_FAILED;
+    }
     /* Deinitializes the HASH peripheral */
     if (HAL_HASH_DeInit(&ctx->hhash_sha1) == HAL_ERROR) {
+        st_release_hash_mutex();
         return MBEDTLS_ERR_SHA1_HW_ACCEL_FAILED;
     }
 
@@ -105,29 +114,39 @@ int mbedtls_sha1_starts_ret(mbedtls_sha1_context *ctx)
     /* clear CR ALGO value */
     HASH->CR &= ~HASH_CR_ALGO_Msk;
     if (HAL_HASH_Init(&ctx->hhash_sha1) == HAL_ERROR) {
+        st_release_hash_mutex();
         return MBEDTLS_ERR_SHA1_HW_ACCEL_FAILED;
     }
     if (st_sha1_save_hw_context(ctx) != 1) {
+        st_release_hash_mutex();
         // return HASH_BUSY timeout Error here
         return MBEDTLS_ERR_SHA1_HW_ACCEL_FAILED;
     }
+    st_release_hash_mutex();
     return 0;
 }
 
 int mbedtls_internal_sha1_process(mbedtls_sha1_context *ctx, const unsigned char data[ST_SHA1_BLOCK_SIZE])
 {
+    if (st_acquire_hash_mutex() != osOK) {
+        return MBEDTLS_ERR_SHA1_HW_ACCEL_FAILED;
+    }
     if (st_sha1_restore_hw_context(ctx) != 1) {
         // return HASH_BUSY timeout Error here
+        st_release_hash_mutex();
         return MBEDTLS_ERR_SHA1_HW_ACCEL_FAILED;
     }
     if (HAL_HASH_SHA1_Accumulate(&ctx->hhash_sha1, (uint8_t *) data, ST_SHA1_BLOCK_SIZE) != 0) {
+            st_release_hash_mutex();
         return MBEDTLS_ERR_SHA1_HW_ACCEL_FAILED;
     }
 
     if (st_sha1_save_hw_context(ctx) != 1) {
         // return HASH_BUSY timeout Error here
+        st_release_hash_mutex();
         return MBEDTLS_ERR_SHA1_HW_ACCEL_FAILED;
     }
+    st_release_hash_mutex();
     return 0;
 }
 
@@ -135,8 +154,12 @@ int mbedtls_sha1_update_ret(mbedtls_sha1_context *ctx, const unsigned char *inpu
 {
     int err;
     size_t currentlen = ilen;
+    if (st_acquire_hash_mutex() != osOK) {
+        return MBEDTLS_ERR_SHA1_HW_ACCEL_FAILED;
+    }
     if (st_sha1_restore_hw_context(ctx) != 1) {
         // return HASH_BUSY timeout Error here
+        st_release_hash_mutex();
         return MBEDTLS_ERR_SHA1_HW_ACCEL_FAILED;
     }
 
@@ -156,13 +179,18 @@ int mbedtls_sha1_update_ret(mbedtls_sha1_context *ctx, const unsigned char *inpu
         // fill buffer and process it
         memcpy(ctx->sbuf + ctx->sbuf_len, input, (ST_SHA1_BLOCK_SIZE - ctx->sbuf_len));
         currentlen -= (ST_SHA1_BLOCK_SIZE - ctx->sbuf_len);
+        st_release_hash_mutex();
         err = mbedtls_internal_sha1_process(ctx, ctx->sbuf);
         if (err != 0) {
             return err;
         }
+        if (st_acquire_hash_mutex() != osOK) {
+            return MBEDTLS_ERR_SHA1_HW_ACCEL_FAILED;
+        }
         // Process every input as long as it is %64 bytes, ie 512 bits
         size_t iter = currentlen / ST_SHA1_BLOCK_SIZE;
         if (HAL_HASH_SHA1_Accumulate(&ctx->hhash_sha1, (uint8_t *)(input + ST_SHA1_BLOCK_SIZE - ctx->sbuf_len), (iter * ST_SHA1_BLOCK_SIZE)) != 0) {
+            st_release_hash_mutex();
             return MBEDTLS_ERR_SHA1_HW_ACCEL_FAILED;
         }
         // sbuf is completely accumulated, now copy up to 63 remaining bytes
@@ -173,21 +201,28 @@ int mbedtls_sha1_update_ret(mbedtls_sha1_context *ctx, const unsigned char *inpu
     }
     if (st_sha1_save_hw_context(ctx) != 1) {
         // return HASH_BUSY timeout Error here
+        st_release_hash_mutex();
         return MBEDTLS_ERR_SHA1_HW_ACCEL_FAILED;
     }
+    st_release_hash_mutex();
     return 0;
 }
 
 int mbedtls_sha1_finish_ret(mbedtls_sha1_context *ctx, unsigned char output[20])
 {
+    if (st_acquire_hash_mutex() != osOK) {
+        return MBEDTLS_ERR_SHA1_HW_ACCEL_FAILED;
+    }
     if (st_sha1_restore_hw_context(ctx) != 1) {
         // return HASH_BUSY timeout Error here
+        st_release_hash_mutex();
         return MBEDTLS_ERR_SHA1_HW_ACCEL_FAILED;
     }
 
     /* Last accumulation for extra bytes in sbuf_len */
     /* This allows the HW flags to be in place in case mbedtls_sha256_update has not been called yet */
     if (HAL_HASH_SHA1_Accumulate(&ctx->hhash_sha1, ctx->sbuf, ctx->sbuf_len) != 0) {
+        st_release_hash_mutex();
         return MBEDTLS_ERR_SHA1_HW_ACCEL_FAILED;
     }
     mbedtls_zeroize(ctx->sbuf, ST_SHA1_BLOCK_SIZE);
@@ -195,12 +230,15 @@ int mbedtls_sha1_finish_ret(mbedtls_sha1_context *ctx, unsigned char output[20])
     __HAL_HASH_START_DIGEST();
 
     if (HAL_HASH_SHA1_Finish(&ctx->hhash_sha1, output, 10) != 0) {
+        st_release_hash_mutex();
         return MBEDTLS_ERR_SHA1_HW_ACCEL_FAILED;
     }
     if (st_sha1_save_hw_context(ctx) != 1) {
         // return HASH_BUSY timeout Error here
+        st_release_hash_mutex();
         return MBEDTLS_ERR_SHA1_HW_ACCEL_FAILED;
     }
+    st_release_hash_mutex();
     return 0;
 }
 
