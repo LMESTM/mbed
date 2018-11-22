@@ -194,13 +194,18 @@ int mbedtls_sha256_update_ret(mbedtls_sha256_context *ctx, const unsigned char *
         // fill buffer and process it
         memcpy(ctx->sbuf + ctx->sbuf_len, input, (ST_SHA256_BLOCK_SIZE - ctx->sbuf_len));
         currentlen -= (ST_SHA256_BLOCK_SIZE - ctx->sbuf_len);
-        st_release_hash_mutex();
-        err = mbedtls_internal_sha256_process(ctx, ctx->sbuf);
-        if (err != 0) {
-            return err;
-        }
-        if (st_acquire_hash_mutex() != osOK) {
-            return MBEDTLS_ERR_SHA256_HW_ACCEL_FAILED;
+        /* copy the content of process function to avoid releasing the mutex */
+        if (ctx->is224 == 0) {
+            if (HAL_HASHEx_SHA256_Accumulate(&ctx->hhash_sha256, (uint8_t *)ctx->sbuf, ST_SHA256_BLOCK_SIZE) != 0) {
+                printf("SHA_256_ERROR12\r\n");
+                st_release_hash_mutex();
+                return MBEDTLS_ERR_SHA256_HW_ACCEL_FAILED;
+            }
+        } else {
+            if (HAL_HASHEx_SHA224_Accumulate(&ctx->hhash_sha256, (uint8_t *)ctx->sbuf, ST_SHA256_BLOCK_SIZE) != 0) {
+                st_release_hash_mutex();
+                return MBEDTLS_ERR_SHA256_HW_ACCEL_FAILED;
+            }
         }
         // Process every input as long as it is %64 bytes, ie 512 bits
         size_t iter = currentlen / ST_SHA256_BLOCK_SIZE;
