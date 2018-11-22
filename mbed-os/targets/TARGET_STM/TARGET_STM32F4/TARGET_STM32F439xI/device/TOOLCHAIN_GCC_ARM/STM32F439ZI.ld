@@ -1,3 +1,11 @@
+M_VECTOR_RAM_SIZE = 0x400;
+
+/* With the RTOS in use, this does not affect the main stack size. The size of
+ * the stack where main runs is determined via the RTOS. */
+STACK_SIZE = 0x400;
+
+HEAP_SIZE = 0x6000;
+
 #if !defined(MBED_APP_START)
   #define MBED_APP_START 0x08000000
 #endif
@@ -6,19 +14,20 @@
   #define MBED_APP_SIZE 2048k
 #endif
 
-/* Linker script to configure memory regions. */
+/* Specify the memory areas */
 MEMORY
-{ 
-  FLASH (rx) : ORIGIN = MBED_APP_START, LENGTH = MBED_APP_SIZE
-  CCM (rwx) : ORIGIN = 0x10000000, LENGTH = 64K
-  RAM (rwx) : ORIGIN = 0x200001AC, LENGTH = 192k - 0x1AC 
+{
+    VECTORS (rx) : ORIGIN = MBED_APP_START, LENGTH = 0x400
+    FLASH (rx)   : ORIGIN = MBED_APP_START + 0x400, LENGTH = MBED_APP_SIZE - 0x400
+    CCM (rwx)    : ORIGIN = 0x10000000, LENGTH = 64K
+    RAM (rwx)    : ORIGIN = 0x20000000, LENGTH = 192k
 }
 
 /* Linker script to place sections and symbol values. Should be used together
  * with other linker script that defines memory regions FLASH and RAM.
  * It references following symbols, which must be defined in code:
  *   Reset_Handler : Entry of reset handler
- * 
+ *
  * It defines following symbols, which code can use without definition:
  *   __exidx_start
  *   __exidx_end
@@ -45,10 +54,18 @@ ENTRY(Reset_Handler)
 
 SECTIONS
 {
+    .isr_vector :
+    {
+        __vector_table = .;
+        KEEP(*(.isr_vector))
+         . = ALIGN(4);
+    } > VECTORS
+
     .text :
     {
-        KEEP(*(.isr_vector))
+
         *(.text*)
+
         KEEP(*(.init))
         KEEP(*(.fini))
 
@@ -77,6 +94,7 @@ SECTIONS
     } > FLASH
 
     __exidx_start = .;
+
     .ARM.exidx :
     {
         *(.ARM.exidx* .gnu.linkonce.armexidx.*)
@@ -86,8 +104,22 @@ SECTIONS
     __etext = .;
     _sidata = .;
 
-    .data : AT (__etext)
+    .interrupts_ram :
     {
+        . = ALIGN(4);
+        __VECTOR_RAM__ = .;
+        __interrupts_ram_start__ = .; /* Create a global symbol at data start */
+        *(.m_interrupts_ram)     /* This is a user defined section */
+        . += M_VECTOR_RAM_SIZE;
+        . = ALIGN(4);
+        __interrupts_ram_end__ = .; /* Define a global symbol at data end */
+    } > RAM
+
+
+    .data :
+    {
+        PROVIDE( __etext = LOADADDR(.data) );
+
         __data_start__ = .;
         _sdata = .;
         *(vtable)
@@ -120,9 +152,23 @@ SECTIONS
         __data_end__ = .;
         _edata = .;
 
+    } > RAM AT > FLASH
+
+
+    /* Uninitialized data section
+     * This region is not initialized by the C/C++ library and can be used to
+     * store state across soft reboots. */
+    .uninitialized (NOLOAD):
+    {
+        . = ALIGN(32);
+        __uninitialized_start = .;
+        *(.uninitialized)
+        KEEP(*(.keep.uninitialized))
+        . = ALIGN(32);
+        __uninitialized_end = .;
     } > RAM
 
-    .bss :
+    .bss (NOLOAD):
     {
         . = ALIGN(4);
         __bss_start__ = .;
@@ -134,29 +180,18 @@ SECTIONS
         _ebss = .;
     } > RAM
 
-    .heap (COPY):
+    .heap (NOLOAD):
     {
         __end__ = .;
         end = __end__;
-        *(.heap*)
+        . += HEAP_SIZE;
         __HeapLimit = .;
     } > RAM
 
-    /* .stack_dummy section doesn't contains any symbols. It is only
-     * used for linker to calculate size of stack sections, and assign
-     * values to stack symbols later */
-    .stack_dummy (COPY):
-    {
-        *(.stack*)
-    } > RAM
-
-    /* Set stack top to end of RAM, and stack limit move down by
-     * size of stack_dummy section */
     __StackTop = ORIGIN(RAM) + LENGTH(RAM);
-    _estack = __StackTop;
-    __StackLimit = __StackTop - SIZEOF(.stack_dummy);
-    PROVIDE(__stack = __StackTop);
+    __stack = __StackTop;
+    __StackLimit = __StackTop - STACK_SIZE;
 
-    /* Check if data + heap + stack exceeds RAM limit */
-    ASSERT(__StackLimit >= __HeapLimit, "region RAM overflowed with stack")
+    ASSERT(__StackLimit >= __HeapLimit, "Region RAM overflowed with stack and heap")
+
 }

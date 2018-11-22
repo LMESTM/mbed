@@ -30,7 +30,7 @@
 #ifndef PAL_BOARD_SPECIFIC_CONFIG
     #if defined(TARGET_K64F) || defined(TARGET_K66F)
         #include "K64F_and_K66F_default.h"
-    #elif defined(TARGET_NUCLEO_F429ZI)
+    #elif defined(TARGET_NUCLEO_F429ZI) || defined(TARGET_NUCLEO_F439ZI)
         #include "NUCLEO_default.h"
     #elif defined(TARGET_UBLOX_EVK_ODIN_W2)
         #include "ODIN_default.h"

@@ -74,10 +74,10 @@ defined in linker script */
     .section  .text.Reset_Handler
   .weak  Reset_Handler
   .type  Reset_Handler, %function
-Reset_Handler: 
-  ldr   sp, =_estack       /* set stack pointer */
- 
-/* Copy the data segment initializers from flash to SRAM */  
+Reset_Handler:
+  ldr   sp, =__stack       /* set stack pointer */
+
+/* Copy the data segment initializers from flash to SRAM */
   movs  r1, #0
   b  LoopCopyDataInit
 
@@ -140,10 +140,10 @@ Infinite_Loop:
 *******************************************************************************/
    .section  .isr_vector,"a",%progbits
   .type  g_pfnVectors, %object
-  .size  g_pfnVectors, .-g_pfnVectors 
-  
-  g_pfnVectors:
-  .word  _estack
+  .size  g_pfnVectors, .-g_pfnVectors
+
+g_pfnVectors:
+  .word  __stack
   .word  Reset_Handler
 
   .word  NMI_Handler

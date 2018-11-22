@@ -36,7 +36,7 @@
   #define MBED_APP_SIZE 0x200000
 #endif
 
-; STM32F439xI: 2048 KB FLASH (0x200000) + 256 KB SRAM (0x30000 + 0x10000)
+; 2 MB FLASH (0x200000) + 256 KB SRAM (0x40000)
 LR_IROM1 MBED_APP_START MBED_APP_SIZE  {    ; load region size_region
 
   ER_IROM1 MBED_APP_START MBED_APP_SIZE  {  ; load address = execution address
@@ -45,13 +45,10 @@ LR_IROM1 MBED_APP_START MBED_APP_SIZE  {    ; load region size_region
    .ANY (+RO)
   }
 
-  ; Total: 107 vectors = 428 bytes (0x1AC) to be used
-  ; should match ER_IROM1::RESET/4 and cmsis_nvic.h::NVIC_NUM_VECTORS
-  RW_IRAM1 (0x20000000 + (107*4)) (0x30000 - (107*4))  {  ; RW data
+  ; Total: 107 vectors = 428 bytes (0x1AC) to be reserved in RAM
+  RW_IRAM1 (0x20000000+0x1AC) (0x20000-0x1AC)  {  ; RW data
    .ANY (+RW +ZI)
   }
-  RW_IRAM2 (0x10000000) 0x10000 { 
-   .ANY (+RW +ZI) 
-  }
+
 }
 
