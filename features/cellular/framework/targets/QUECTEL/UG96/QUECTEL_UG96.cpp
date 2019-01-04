@@ -19,6 +19,7 @@
 #include "QUECTEL_UG96_CellularNetwork.h"
 #include "QUECTEL_UG96_CellularPower.h"
 #include "QUECTEL_UG96_CellularContext.h"
+#include "QUECTEL_UG96_CellularStack.h"
 
 using namespace mbed;
 using namespace events;
@@ -30,8 +31,19 @@ using namespace events;
 #define MAX_STARTUP_TRIALS 5
 #define MAX_RESET_TRIALS 5
 
+static const AT_CellularBase::SupportedFeature unsupported_features[] =  {
+    AT_CellularBase::AT_CGSN_WITH_TYPE,
+    AT_CellularBase::AT_CGAUTH,
+#if !NSAPI_PPP_AVAILABLE
+    AT_CellularBase::AT_CGDATA,
+#endif
+    AT_CellularBase::AT_CGACT,
+    AT_CellularBase::SUPPORTED_FEATURE_END_MARK
+};
+
 QUECTEL_UG96::QUECTEL_UG96(FileHandle *fh) : AT_CellularDevice(fh)
 {
+    AT_CellularBase::set_unsupported_features(unsupported_features);
 }
 
 QUECTEL_UG96::~QUECTEL_UG96()

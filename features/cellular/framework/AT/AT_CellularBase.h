@@ -51,6 +51,7 @@ public:
         AT_CGSN_WITH_TYPE, // AT+CGSN without type is likely always supported similar to AT+GSN
         AT_CGDATA, // alternative is to support only ATD*99***<cid>#
         AT_CGAUTH, // APN authentication AT commands supported
+        AT_CGACT, // In case CGACT is not supported and replaced by another command, e.g. QIACT
         SUPPORTED_FEATURE_END_MARK // must be last element in the array of features
     };
     static void set_unsupported_features(const SupportedFeature *unsupported_features);

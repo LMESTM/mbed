@@ -16,6 +16,7 @@
  */
 
 #include "QUECTEL_UG96_CellularNetwork.h"
+#include "QUECTEL/UG96/QUECTEL_UG96_CellularNetwork.h"
 
 using namespace mbed;
 

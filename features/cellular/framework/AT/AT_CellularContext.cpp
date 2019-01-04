@@ -494,9 +494,17 @@ nsapi_error_t AT_CellularContext::do_activate_context()
 
     _is_context_active = false;
     _is_context_activated = false;
-    _at.cmd_start("AT+CGACT?");
+    if (!is_supported(AT_CGACT)) {
+        _at.cmd_start("AT+QIACT?");
+    } else {
+        _at.cmd_start("AT+CGACT?");
+    }
     _at.cmd_stop();
-    _at.resp_start("+CGACT:");
+    if (!is_supported(AT_CGACT)) {
+        _at.resp_start("+QIACT:");
+    } else {
+        _at.resp_start("+CGACT:");
+    }
     while (_at.info_resp()) {
         int context_id = _at.read_int();
         int context_activation_state = _at.read_int();
@@ -508,7 +516,11 @@ nsapi_error_t AT_CellularContext::do_activate_context()
 
     if (!_is_context_active) {
         tr_info("Activate PDP context %d", _cid);
-        _at.cmd_start("AT+CGACT=1,");
+        if (!is_supported(AT_CGACT)) {
+            _at.cmd_start("AT+QIACT=");
+        } else {
+            _at.cmd_start("AT+CGACT=1,");
+        }
         _at.write_int(_cid);
         _at.cmd_stop_read_resp();
         if (_at.get_last_error() == NSAPI_ERROR_OK) {
