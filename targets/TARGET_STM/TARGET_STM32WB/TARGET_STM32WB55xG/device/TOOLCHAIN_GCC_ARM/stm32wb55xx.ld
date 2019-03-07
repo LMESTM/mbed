@@ -17,7 +17,7 @@ STACK_SIZE = MBED_BOOT_STACK_SIZE;
 MEMORY
 { 
   FLASH (rx) : ORIGIN = MBED_APP_START, LENGTH = MBED_APP_SIZE
-  RAM1 (rwx)  : ORIGIN = 0x2000013C, LENGTH = 192K - 0x13C
+  RAM1 (rwx)  : ORIGIN = 0x2000013C, LENGTH = 192K - (0x13C + 0x4)
   RAM2a (rw)  : ORIGIN = 0x20030000, LENGTH = 10K
   RAM2b (rw)  : ORIGIN = 0x20038000, LENGTH = 20K
 }
@@ -131,12 +131,12 @@ SECTIONS
 
     .bss :
     {
-        . = ALIGN(4);
+        . = ALIGN(8);
         __bss_start__ = .;
         _sbss = .;
         *(.bss*)
         *(COMMON)
-        . = ALIGN(4);
+        . = ALIGN(8);
         __bss_end__ = .;
         _ebss = .;
     } > RAM1
@@ -146,6 +146,7 @@ SECTIONS
         __end__ = .;
         end = __end__;
         *(.heap*)
+        . = ORIGIN(RAM1) + LENGTH(RAM1) - STACK_SIZE;
         __HeapLimit = .;
     } > RAM1
 
