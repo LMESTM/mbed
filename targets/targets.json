@@ -7741,6 +7741,10 @@
         "device_name": "STM32L496AG",
         "bootloader_supported": true
     },
+    "P_L496G_CELL": {
+        "inherits": ["DISCO_L496AG"],
+        "components_add": ["STMOD_CELLULAR"]
+    },
     "NUCLEO_L496ZG": {
         "inherits": ["FAMILY_STM32"],
         "supported_form_factors": ["ARDUINO", "MORPHO"],
