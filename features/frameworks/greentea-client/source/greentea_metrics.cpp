@@ -98,7 +98,10 @@ static void send_CPU_info()
     greentea_send_kv("__cpu_info        up time", stats.uptime);
     greentea_send_kv("__cpu_info     sleep time", stats.sleep_time);
     greentea_send_kv("__cpu_info deepsleep time", stats.deep_sleep_time);
-    greentea_send_kv("__cpu_info  %  sleep/deep", (stats.sleep_time * 100) / stats.uptime, (stats.deep_sleep_time * 100) / stats.uptime);
+    if(stats.uptime != 0) {
+        greentea_send_kv("__cpu_info  %  sleep/deep", (stats.sleep_time * 100) / stats.uptime, (stats.deep_sleep_time * 100) / stats.uptime);
+    }
+
 }
 #endif
 
